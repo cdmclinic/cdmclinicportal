@@ -651,39 +651,12 @@
         </div>
         <div id="userManagementView" class="content-box hidden">
     <div class="section-header">
-        <h2>👥 User Management</h2>
-        <button class="btn btn-success" onclick="showUserForm()">➕ Add User</button>
+        <h2>👥 User Accounts</h2>
     </div>
     <div id="usersList" class="patient-list"></div>
 </div>
 
-<div id="userFormView" class="content-box hidden">
-    <h2>📋 Add User Account</h2>
-    <div class="form-grid" style="margin-top: 25px;">
-        <div class="form-group">
-            <label>Full Name <span class="required">*</span></label>
-            <input type="text" id="userFullName" required>
-        </div>
-        <div class="form-group">
-            <label>Username <span class="required">*</span></label>
-            <input type="text" id="userUsername" required>
-        </div>
-        <div class="form-group">
-            <label>Password <span class="required">*</span></label>
-            <input type="password" id="userPassword" required>
-        </div>
-        <div class="form-group">
-            <label>Linked Patient <span class="required">*</span></label>
-            <select id="userPatientId" required>
-                <option value="">Select Patient</option>
-            </select>
-        </div>
-    </div>
-    <div class="form-actions">
-        <button class="btn btn-primary" onclick="saveUser()">Save</button>
-        <button class="btn btn-secondary" onclick="showView('users')">Cancel</button>
-    </div>
-</div>
+
 
         <div id="servicesView" class="content-box hidden">
             <div class="section-header">
@@ -704,6 +677,27 @@
     
     <div id="myInfoContent">
         <!-- User info will be displayed here -->
+    </div>
+</div>
+<div id="changePasswordView" class="content-box hidden">
+    <h2>🔒 Change Password</h2>
+    <div class="form-grid" style="margin-top: 25px; max-width: 600px;">
+        <div class="form-group full-width">
+            <label>Current Password <span class="required">*</span></label>
+            <input type="password" id="currentPassword" required>
+        </div>
+        <div class="form-group full-width">
+            <label>New Password <span class="required">*</span></label>
+            <input type="password" id="newPassword" required>
+        </div>
+        <div class="form-group full-width">
+            <label>Confirm New Password <span class="required">*</span></label>
+            <input type="password" id="confirmPassword" required>
+        </div>
+    </div>
+    <div class="form-actions">
+        <button class="btn btn-primary" onclick="saveNewPassword()">💾 Update Password</button>
+        <button class="btn btn-secondary" onclick="showView('myinfo')">Cancel</button>
     </div>
 </div>
 <div id="visitsView" class="content-box hidden">
@@ -978,7 +972,7 @@
         document.getElementById('listView').classList.remove('hidden');
         renderPatients();
     } else if (view === 'register') {
-    document.getElementById('formView').classList.remove('hidden');
+        document.getElementById('formView').classList.remove('hidden');
     } else if (view === 'schedule') {
         document.getElementById('scheduleView').classList.remove('hidden');
         renderSchedules();
@@ -992,18 +986,21 @@
         document.getElementById('userManagementView').classList.remove('hidden');
         renderUsers();
     } else if (view === 'myinfo') {
-    document.getElementById('myInfoView').classList.remove('hidden');
-    // Reload visits to ensure we have the latest data
-    getAllFromStore('visits').then(visits => {
-        data.visits = visits;
-        renderMyInfo();
-    });
-}
-    // Add this case in the if-else chain
-else if (view === 'visits') {
-    document.getElementById('visitsView').classList.remove('hidden');
-    renderVisits();
-}
+        document.getElementById('myInfoView').classList.remove('hidden');
+        getAllFromStore('visits').then(visits => {
+            data.visits = visits;
+            renderMyInfo();
+        });
+    } else if (view === 'changepassword') {
+        document.getElementById('changePasswordView').classList.remove('hidden');
+        // Clear password fields
+        document.getElementById('currentPassword').value = '';
+        document.getElementById('newPassword').value = '';
+        document.getElementById('confirmPassword').value = '';
+    } else if (view === 'visits') {
+        document.getElementById('visitsView').classList.remove('hidden');
+        renderVisits();
+    }
 }
 
     function renderPatients() {
@@ -1433,7 +1430,10 @@ async function updateQuantity(id, change) {
     content.innerHTML = `
         <div class="patient-card">
             <div class="patient-info">
-                <div class="patient-name">${p.firstName} ${p.lastName}</div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <div class="patient-name">${p.firstName} ${p.lastName}</div>
+                    <button class="btn btn-primary" onclick="showView('changepassword')">🔒 Change Password</button>
+                </div>
                 <div class="patient-id">Student Number: ${p.studentNumber || 'N/A'} | ID: ${p.id}</div>
                 <div class="patient-details">
                     <div class="detail-item"><span class="detail-icon">📅</span><span>Date of Birth: ${p.dateOfBirth}</span></div>
@@ -1734,21 +1734,7 @@ async function deleteVisit(id) {
     }
 }
     // User Management Functions
-function showUserForm() {
-    document.getElementById('userManagementView').classList.add('hidden');
-    document.getElementById('userFormView').classList.remove('hidden');
-    
-    // Populate patient dropdown
-    const select = document.getElementById('userPatientId');
-    select.innerHTML = '<option value="">Select Patient</option>' + 
-        data.patients.map(p => `<option value="${p.id}">${p.firstName} ${p.lastName}</option>`).join('');
-    
-    // Clear form
-    document.getElementById('userFullName').value = '';
-    document.getElementById('userUsername').value = '';
-    document.getElementById('userPassword').value = '';
-    select.value = '';
-}
+
 
 function renderUsers() {
     const list = document.getElementById('usersList');
@@ -1772,52 +1758,15 @@ function renderUsers() {
                             <div class="detail-item"><span class="detail-icon">📅</span><span>Created: ${u.createdDate || 'N/A'}</span></div>
                         </div>
                     </div>
-                    <div class="patient-actions">
-                        <button class="btn btn-danger" onclick="deleteUser(${u.id})">Delete</button>
-                    </div>
                 </div>
             </div>
         `;
     }).join('');
 }
 
-async function saveUser() {
-    const user = {
-        fullName: document.getElementById('userFullName').value.trim(),
-        username: document.getElementById('userUsername').value.trim(),
-        password: document.getElementById('userPassword').value.trim(),
-        patientId: parseInt(document.getElementById('userPatientId').value),
-        createdDate: new Date().toLocaleDateString()
-    };
-    
-    if (!user.fullName || !user.username || !user.password || !user.patientId) {
-        alert('Please fill all required fields');
-        return;
-    }
-    
-    // Check if username already exists
-    const existingUser = data.users.find(u => u.username === user.username);
-    if (existingUser) {
-        alert('Username already exists. Please choose a different username.');
-        return;
-    }
-    
-    try {
-        await addToStore('users', user);
-        data.users = await getAllFromStore('users');
-        alert('User account created successfully!');
-        showView('users');
-    } catch (error) {
-        alert('Error creating user account. Username might already exist.');
-    }
-}
 
-async function deleteUser(id) {
-    if (!confirm('Delete this user account?')) return;
-    await deleteFromStore('users', id);
-    data.users = await getAllFromStore('users');
-    renderUsers();
-}
+
+
     // Login System
 let isAdminLogin = false;
 let currentUser = null;
@@ -1907,6 +1856,61 @@ function logout() {
     document.querySelector('.container').style.display = 'none';
     document.getElementById('loginUsername').value = '';
     document.getElementById('loginPassword').value = '';
+}
+async function saveNewPassword() {
+    const currentPassword = document.getElementById('currentPassword').value.trim();
+    const newPassword = document.getElementById('newPassword').value.trim();
+    const confirmPassword = document.getElementById('confirmPassword').value.trim();
+    
+    if (!currentPassword || !newPassword || !confirmPassword) {
+        alert('Please fill all fields');
+        return;
+    }
+    
+    // Find current user in database
+    const user = data.users.find(u => u.patientId === currentUser.patientId);
+    
+    if (!user) {
+        alert('User account not found');
+        return;
+    }
+    
+    // Verify current password
+    if (user.password !== currentPassword) {
+        alert('Current password is incorrect');
+        return;
+    }
+    
+    // Check if new passwords match
+    if (newPassword !== confirmPassword) {
+        alert('New passwords do not match');
+        return;
+    }
+    
+    // Check if new password is different from current
+    if (newPassword === currentPassword) {
+        alert('New password must be different from current password');
+        return;
+    }
+    
+    // Validate password length
+    if (newPassword.length < 6) {
+        alert('New password must be at least 6 characters long');
+        return;
+    }
+    
+    try {
+        // Update password
+        user.password = newPassword;
+        await updateInStore('users', user);
+        data.users = await getAllFromStore('users');
+        
+        alert('✅ Password changed successfully!');
+        showView('myinfo');
+    } catch (error) {
+        console.error('Error updating password:', error);
+        alert('Error changing password. Please try again.');
+    }
 }
 
 // Hide main container on initial load
